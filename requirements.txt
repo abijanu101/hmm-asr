@@ -1,0 +1,14 @@
+# fundamental shit
+numpy
+pandas
+threading
+
+# for input and signal processing
+sounddevice
+librosa
+
+# aeinwi shugal
+matplotlib
+
+# acousting and alignment model
+hmmlearn
