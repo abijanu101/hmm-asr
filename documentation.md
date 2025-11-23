@@ -48,7 +48,5 @@ The expanded fourier transform can be used to prove that for all k, X[n-k] and X
 
 The rfft() is relevant here since. For real-valued inputs, this function basically just gives you quickly calculated fft() results with only the first n // 2 + 1 frequency bins, which is exactly what we want
 
-### Log-Mel Proper
-All of this is to say, I took a rfft()
-I then squared it to construct it into a power spectrum (known to give better results).
-Finally, I multiplied it with a mel filterbank to give me the log-mel vector
+### Finishing All Pre-processing
+With all this theory knowledge, I just wrote like 5 lines of code and now I have working feature extraction ready for my HMM to be trained on.

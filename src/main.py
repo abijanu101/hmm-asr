@@ -22,9 +22,14 @@ def handle_asr() -> None:
         prev = curr
         curr, _ = stream.read(config.FRAME_SIZE)
 
+        # preprocessing
         frames = pre.define_frames(prev, curr)
-        windows = pre.to_hann_windows(frames)
-        pre.to_log_mel(windows)
+        windows = pre.to_hann_window(frames)
+        log_mels = pre.to_log_mel(windows)
+        mfccs = pre.to_mfcc(log_mels)
+
+        for mfcc in mfccs:
+            print(mfcc)
 
     stream.close()
     
@@ -40,9 +45,10 @@ def main() -> int:
     asr_thread = threading.Thread(target=handle_asr)
     asr_thread.start()
 
-    # UI call here
+    # use main thread for UI and as soon as it closes, cleanup and exit
 
-    asr_thread.join()    
+    transliterating = False
+    asr_thread.join()
     return 0
 
 if __name__ == '__main__':
