@@ -18,9 +18,9 @@ The InputStream solution has both async and sync options. But since the frames m
 Apparently a frame size of 20-25ms and a frame drift of 5-10ms is the established sweet-spot, so I chose 20ms and 5ms respectively for these constants.
 
 ### Windowing
-* Applied the Hann Window to avoid Spectral Leakage before applying the Fourier Transform
+Applied the Hann Window to avoid Spectral Leakage before applying the Fourier Transform
 
-## 22/11/25: Preprocessing Complete
+## 23/11/25: Preprocessing Complete
 
 ### File Organization
 Improved the file organization by separating logic into smaller files
