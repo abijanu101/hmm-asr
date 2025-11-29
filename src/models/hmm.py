@@ -5,7 +5,7 @@ from src.common import config
 from hmmlearn import hmm
 
 
-def create() -> dict[str, hmm.GaussianHMM]:
+def create() -> dict[str, hmm.GMMHMM]:
     """Create HMM+GMM Models"""
 
     models = {}
@@ -21,9 +21,7 @@ def create() -> dict[str, hmm.GaussianHMM]:
     return models
 
 
-def persist(
-    models: dict[str, hmm.GaussianHMM], last_file_trained: dict[str, int], path: str
-) -> None:
+def persist(models: dict[str, hmm.GMMHMM], last_file_trained: dict[str, int], path: str) -> None:
     """Persist HMM Models along with information about the last file successfully trained on in the dataset"""
 
     print("Saving...")
@@ -33,7 +31,7 @@ def persist(
     print(f"Saved models as file '{path}' successfully.")
 
 
-def load(path: str) -> tuple[dict[str, hmm.GaussianHMM], dict[str, int]]:
+def load(path: str) -> tuple[dict[str, hmm.GMMHMM], dict[str, int]]:
     """Load HMM Models along with the information about the last file successfully trained on in the dataset"""
 
     if not os.path.exists(path):

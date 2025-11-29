@@ -51,6 +51,19 @@ def get_next_indices(last_file_trained: dict[str, int]) -> tuple[int, int, int]:
     return i, j, k
 
 
+def train(models: dict[str, hmm.hmm.GMMHMM], dir: str, file: str) -> None:
+    """Train the HMM+GMM models on the file specified"""
+
+    print(os.path.join(dir, file + '.WAV'))
+    wav = librosa.load(os.path.join(dir, file + '.WAV'), sr=config.SAMPLE_RATE)
+    phones: str
+    with open(os.path.join(dir,file + '.PHN')) as f:
+        phones = f.read()
+
+
+        
+    print(wav, phones)
+
 def main() -> None:
     """Train the HMM+GMM Models"""
 
@@ -59,9 +72,7 @@ def main() -> None:
     last_file_trained = {}
 
     if not os.path.exists(MODELS_PATH):
-        confirmation = input(
-            f"{MODELS_PATH} doesn't exist, do you want to create a new set of HMM models? [Y/n]: "
-        )
+        confirmation = input( f"{MODELS_PATH} doesn't exist, do you want to create a new set of HMM models? [Y/n]: ")
 
         if confirmation != "Y":
             print("Okay, I can't really do anything then")
@@ -85,16 +96,15 @@ def main() -> None:
                 files = get_files(os.path.join(TIMIT_PATH, drs[i], speakers[j]))
 
                 for k in range(k_old, len(files)):
-                    print("yuh - ", i, j, k)
+                    train(models, os.path.join(TIMIT_PATH, drs[i], speakers[j]), files[k])
                     
                 k_old = 0
             j_old = 0
+            
     except KeyboardInterrupt:
-        hmm.persist(models, {"DR-IND": i, "SPKR-IND": j, "FILE_IND": k}, os.path.join(MODELS_PATH))
-    
-        
-
-    # phn, wav = get_pairs(os.path.join(TIMIT_PATH, drs[i], speakers[j]))
+        last_file_trained = {"DR-IND": i, "SPKR-IND": j, "FILE-IND": k}
+        print("Trained until: ", last_file_trained)
+        hmm.persist(models, last_file_trained, MODELS_PATH)
 
 
 if __name__ == "__main__":
