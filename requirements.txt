@@ -10,5 +10,5 @@ librosa
 # aeinwi shugal
 matplotlib
 
-# acousting and alignment model
+# training stuff
 hmmlearn

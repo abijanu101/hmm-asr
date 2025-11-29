@@ -3,12 +3,10 @@ from scipy.signal.windows import hann
 from scipy.fftpack import dct
 import librosa
 
-import config
-
+from src.common import config
 
 HANN_WINDOW = hann(config.FRAME_SIZE, sym=False)
 MEL_FILTERBANK = librosa.filters.mel(sr=config.SAMPLE_RATE, n_fft = config.FRAME_SIZE)
-
     
 def define_frames(prev :np.ndarray, curr: np.ndarray) -> list[np.ndarray]:
     '''This will define all the overlapping frames between prev and curr read buffers as well as the entirety of the current read'''

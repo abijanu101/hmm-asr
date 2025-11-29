@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import threading
 
-import config as config
-import preprocessing as pre
+from src.common import config
+from src.common import preprocessing as pre
 
 transliterating = False
 
@@ -17,8 +17,6 @@ def handle_asr() -> None:
     curr = np.zeros(config.FRAME_SIZE)
 
     while transliterating:
-    # for i in range(0,3):
-        
         prev = curr
         curr, _ = stream.read(config.FRAME_SIZE)
 
@@ -46,8 +44,13 @@ def main() -> int:
     asr_thread.start()
 
     # use main thread for UI and as soon as it closes, cleanup and exit
-
-    # transliterating = False
+    
+    try:
+        while (True):
+            continue
+    except KeyboardInterrupt:
+        transliterating = False
+            
     asr_thread.join()
     return 0
 
