@@ -10,8 +10,9 @@ def create() -> dict[str, hmm.GaussianHMM]:
 
     models = {}
     for phn in config.PHONEMES:
-        models[phn] = hmm.GaussianHMM(
+        models[phn] = hmm.GMMHMM(
             n_components=3,  # start, middle, end
+            n_mix=config.N_GAUSSIANS,
             algorithm="viterbi",
             n_iter=config.N_EM_ITER,  # MAX EM Iterations
         )
@@ -20,7 +21,9 @@ def create() -> dict[str, hmm.GaussianHMM]:
     return models
 
 
-def persist(models: dict[str, hmm.GaussianHMM], last_file_trained : str | None, path: str) -> None:
+def persist(
+    models: dict[str, hmm.GaussianHMM], last_file_trained: dict[str, int], path: str
+) -> None:
     """Persist HMM Models along with information about the last file successfully trained on in the dataset"""
 
     print("Saving...")
@@ -30,7 +33,7 @@ def persist(models: dict[str, hmm.GaussianHMM], last_file_trained : str | None, 
     print(f"Saved models as file '{path}' successfully.")
 
 
-def load(path: str) -> tuple[dict[str, hmm.GaussianHMM], str | None]:
+def load(path: str) -> tuple[dict[str, hmm.GaussianHMM], dict[str, int]]:
     """Load HMM Models along with the information about the last file successfully trained on in the dataset"""
 
     if not os.path.exists(path):
@@ -38,7 +41,7 @@ def load(path: str) -> tuple[dict[str, hmm.GaussianHMM], str | None]:
 
     print("Loading HMM+GMM Models...")
     data = joblib.load(path)
-    last_file_trained : str | None = data.get("last_file_trained", None)
+    last_file_trained: dict[str, int] = data.get("last_file_trained", {})
 
     models = data.get("models", None)
     if not models:

@@ -79,3 +79,5 @@ I learned that we actually set up multiple HMM+GMM models; one for each phoneme.
 While combing through the list of phonemes and reading about how sometimes people merge certain phonemes into one to reduce the 61 phonemes to around 39, I realized a potential problem; What if the CMUdict input is expected to be different. Turns out it is, but thats not really that big of a problem since frequently used mappings exist regardless.
 
 One might stop and think that this means we only need 39 HMM models rather than the 61 for each TIMIT phoneme. This is not necesassarily wrong, but I decided against it because its my first time training and I dont have the time to come back and redo everything if my mappings end up losing information or causing troubles later on.
+
+Next, I used ```joblib``` to persist and load the HMM models. This was necessary so we could have continue-where-you-left-off behavior for both training and also just to load weights from a file for the actual deployment.

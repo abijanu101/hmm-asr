@@ -13,3 +13,5 @@ matplotlib
 # model stuff
 hmmlearn
 joblib
+
+regex
