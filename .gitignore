@@ -1,5 +1,5 @@
 resources/TIMIT
 resources/CMUdict
 
-asr-env/
+asr-env
 __pycache__

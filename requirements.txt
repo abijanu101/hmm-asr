@@ -10,5 +10,6 @@ librosa
 # aeinwi shugal
 matplotlib
 
-# training stuff
+# model stuff
 hmmlearn
+joblib

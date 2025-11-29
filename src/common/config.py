@@ -1,12 +1,16 @@
-SAMPLE_RATE = 16000  # this is usually enough for speech
+"""Audio Processing Stuff"""
+SAMPLE_RATE = 16000             # this is usually enough for speech
 
-FRAME_SIZE = SAMPLE_RATE // 5  # 20ms (1s = 100ms; 1/5s = 20ms)
-FRAME_HOP = FRAME_SIZE // 4  # 5ms
+FRAME_SIZE = SAMPLE_RATE // 5   # 20ms (1s = 100ms; 1/5s = 20ms)
+FRAME_HOP = FRAME_SIZE // 4     # 5ms
 
-N_MFCC = 12  # 12 dimensional MFCC embeddings
+N_MFCC = 12                     # 12 dimensional MFCC embeddings
 
 
-PHONEMES = [  # all of the phonemes the TIMIT dataset contains
+"""HMM Stuff"""
+N_EM_ITER = 50                  # max amount of Expectation-Maximation iterations
+
+PHONEMES = [                    # all of the phonemes the TIMIT dataset contains
     "aa",
     "ae",
     "ah",

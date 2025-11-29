@@ -70,8 +70,12 @@ One potential solution here is to include a catch-all UNK phoneme for room-tone 
 
 ### File Structure
 
-Learned what \_\_init\_\_.py files do and restructured the project for reusability in training.
+Learned what ```\_\_init\_\_.py``` files do and restructured the project.
 
 ### HMM+GMM Setup
 
-TIMIT already comes with all the Phonemes needed for processing English Speech as well as labelled Silence and Short Pause annotations where no speech is uttered, thus we can begin by initializing the HMM with the same exhaustive list of phonemes as our state labels.
+I learned that we actually set up multiple HMM+GMM models; one for each phoneme. Here, each model has 3 states representing the start, middle and end of each respective phoneme utterance. So, I used a short python script to extract every single phoneme used in TIMIT and initialized the models in ```init/hmm.py```.
+
+While combing through the list of phonemes and reading about how sometimes people merge certain phonemes into one to reduce the 61 phonemes to around 39, I realized a potential problem; What if the CMUdict input is expected to be different. Turns out it is, but thats not really that big of a problem since frequently used mappings exist regardless.
+
+One might stop and think that this means we only need 39 HMM models rather than the 61 for each TIMIT phoneme. This is not necesassarily wrong, but I decided against it because its my first time training and I dont have the time to come back and redo everything if my mappings end up losing information or causing troubles later on.
