@@ -174,7 +174,7 @@ D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py:809: Runtim
   self.covars_ = c_n / c_d
 ```
 
-### The Grouping Solution
+### The Batching Solution
 I didn't quite know why all these warnings were coming up, but one of them was quite explicit; I needed more datapoints. So, the next step was to try the grouping solution. And lo-and-behold, it really just worked with no problems as soon as i grouped it.
 
 However, I now realized another mistake I made. I had treated the ``lengths`` param in ``.fit()`` as the amount of frames while it was supposed to be an array representing the lengths of the contiguous frames for each phoneme utterance.
@@ -187,3 +187,47 @@ I found a logical error that made it such that i only inserted only the first fr
 
 ### Degenerate Solution Warning and Associated Errors
 I kept getting a runtime exception after warnings about too little data when I tried to fit. I went from file-level fitting to speaker-level fitting, but even that wasn't enough. Finally, I've landed on this Dialectical Region level fitting and saving.
+
+### Null Row and Covariance Warnings
+Still, I was getting some warnings about there being zeroed out rows in my transition matrix that clogged up my terminal and somehow adding a ```init_params=''``` and ```covariance_type='diag'``` fixed it and gave me a really clean error-free feeling terminal with zero warnings raised.
+
+I left for dinner leaving this setup to train, but then once i got back i saw a
+```
+        47  -59460.00427042      +1.04568672
+        48  -59459.08176617      +0.92250426
+        49  -59458.28170082      +0.80006534
+        50  -59457.53120638      +0.75049444
+Currently Running EM Algorithm for:  em
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\Coding\Projects\hmm-asr\src\train\hmm.py", line 148, in <module>
+    main()
+    ~~~~^^
+  File "D:\Coding\Projects\hmm-asr\src\train\hmm.py", line 140, in main
+    fit_models(models, phonemes)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "D:\Coding\Projects\hmm-asr\src\train\hmm.py", line 73, in fit_models
+    models[phoneme].fit(stacked, [len(seq) for seq in sequences])
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\base.py", line 481, in fit
+    self._check()
+    ~~~~~~~~~~~^^
+  File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py", line 651, in _check
+    super()._check()
+    ~~~~~~~~~~~~~~^^
+  File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\base.py", line 971, in _check
+    self._check_sum_1("startprob_")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\base.py", line 951, in _check_sum_1
+    raise ValueError(
+    ...<4 lines>...
+            else "Expected 1D or 2D array")
+ValueError: startprob_ must sum to 1 (got nan)
+```
+
+At the time of writing, I have quite frankly no clue why this might be happening, but I do have a lead. I've noticed something strange behavior .fit() exhibits - Namely, if for DR1 it runs successfully and converges at a 2-tuple for a given phoneme, say _'ax'_; the next time it runs, instead of picking off where the last 50 iterations converged, the second element of the 2 tuple is always '+nan'.
+
+### One-Go Training
+
+I really didn't want to do this because it's so anti-thetical to a good development experience, but it's clear that .fit() is destructive and resets progress from the previous call. So I will now try and do it all in one go.

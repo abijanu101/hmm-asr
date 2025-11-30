@@ -14,7 +14,8 @@ def define_frames(wav: np.ndarray) -> list[np.ndarray]:
     frames = []
     i = 0
     while i + config.FRAME_SIZE <= len(wav):
-        frames.append(wav[i : i + config.FRAME_SIZE])
+        range = wav[i : i + config.FRAME_SIZE]
+        frames.append(range)
         i += config.FRAME_HOP
 
     return frames
@@ -45,7 +46,7 @@ def extract_data(dir: str, file: str) -> dict[str, list[list[np.ndarray]]]:
         range_start = round(start_sample / config.FRAME_HOP)
         range_end = round(end_sample / config.FRAME_HOP)
         
-        if range_start >= len(mfccs):
+        if range_start >= len(mfccs) or not mfccs[range_start: range_end]:
             continue
 
         grouped[phoneme].append(mfccs[range_start: range_end])
@@ -118,6 +119,7 @@ def main() -> None:
     i_old = last_dr_trained + 1 % len(drs)
     
     try:
+        phonemes = {phn: [] for phn in config.PHONEMES}
         for i in range(i_old, len(drs)):
             print("Scanning through", drs[i])
             DR_PATH = os.path.join(config.TIMIT_TRAIN, drs[i])
@@ -127,7 +129,6 @@ def main() -> None:
                 if os.path.isdir(os.path.join(DR_PATH, spkr))
             )
 
-            phonemes = {phn: [] for phn in config.PHONEMES}
             for spkr in speakers:
                 SPKR_PATH = os.path.join(DR_PATH, spkr)
                 files = get_files(SPKR_PATH)
@@ -137,11 +138,11 @@ def main() -> None:
                     phonemes = merge_phonemes(phonemes, curr_phonemes)
 
                 print("Completed Scanning through Speaker", spkr)
-            fit_models(models, phonemes)
-            hmm.persist(models, i)
+
+        fit_models(models, phonemes)
+        hmm.persist(models, i)
     except KeyboardInterrupt:
-        print("Was training on DR:", i - 1)
-        hmm.persist(models, i - 1)
+        print("Exiting...")
 
 
 if __name__ == "__main__":

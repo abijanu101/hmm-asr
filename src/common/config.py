@@ -23,7 +23,7 @@ TIMIT_TRAIN = os.path.join(
 
 """GMM + HMM Stuff"""
 N_EM_ITER = 50                  # max amount of Expectation-Maximation iterations
-N_GAUSSIANS = 4                 # no of gaussians for GMM
+N_GAUSSIANS = 3                 # no of gaussians for GMM
 N_STATES = 3                    # no of HMM states
 
 PHONEMES = [                    # all of the phonemes the TIMIT dataset contains
