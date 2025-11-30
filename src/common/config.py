@@ -11,8 +11,9 @@ N_MFCC = 12                     # 12 dimensional MFCC embeddings
 
 """Paths"""
 MODELS_PATH = os.path.join(
-    pathlib.Path(__file__).parent.parent.parent, "models", "hmm.pk1"
+    pathlib.Path(__file__).parent.parent.parent, "models"
 )
+HMM_MODEL_PATH = os.path.join(MODELS_PATH, 'hmm.pk1')
 TIMIT_ROOT = os.path.join(
     pathlib.Path(__file__).parent.parent.parent, "resources", "TIMIT"
 )

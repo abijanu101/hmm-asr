@@ -184,3 +184,6 @@ Turns out I need to use a ```dict[str, list[list[np.ndarray]]]``` So i could hav
 
 ### Debugging Grouping
 I found a logical error that made it such that i only inserted only the first frame in my ```mfccs``` for each labelled phoneme utterance even though there were tens of other ones in that range that I should've inserted that led to really impossible results.
+
+### Degenerate Solution Warning and Associated Errors
+I kept getting a runtime exception after warnings about too little data when I tried to fit. I went from file-level fitting to speaker-level fitting, but even that wasn't enough. Finally, I've landed on this Dialectical Region level fitting and saving.
