@@ -1,7 +1,7 @@
-import pathlib
 import os
+from src.common import config
 
-timit_root = os.path.join(pathlib.Path(__file__).parent.parent.parent, 'resources', 'TIMIT')
+timit_root = config.TIMIT_ROOT
 
 phonemes = set()
 

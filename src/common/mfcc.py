@@ -6,7 +6,7 @@ import librosa
 from src.common import config
 
 HANN_WINDOW = hann(config.FRAME_SIZE, sym=False)
-MEL_FILTERBANK = librosa.filters.mel(sr=config.SAMPLE_RATE, n_fft = config.FRAME_SIZE)
+MEL_FILTERBANK = librosa.filters.mel(sr=config.SAMPLE_RATE, n_fft = config.FRAME_SIZE, n_mels=64)
     
 def define_frames(prev :np.ndarray, curr: np.ndarray) -> list[np.ndarray]:
     '''This will define all the overlapping frames between prev and curr read buffers as well as the entirety of the current read'''

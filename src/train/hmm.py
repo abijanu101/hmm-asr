@@ -1,23 +1,82 @@
 import os
-import pathlib
 import regex
 import librosa
+import numpy as np
 
 from src.common import config
+from src.common import mfcc
 from src.models import hmm
 
-MODELS_PATH = os.path.join(
-    pathlib.Path(__file__).parent.parent.parent, "models", "hmm.pk1"
-)
-TIMIT_PATH = os.path.join(
-    pathlib.Path(__file__).parent.parent.parent, "resources", "TIMIT", "TRAIN"
-)
+
+def define_frames(wav: np.ndarray) -> list[np.ndarray]:
+    """Defines overlapping frames for provided audio, see documentation for more details"""
+
+    frames = []
+    i = 0
+    while i + config.FRAME_SIZE <= len(wav):
+        frames.append(wav[i : i + config.FRAME_SIZE])
+        i += config.FRAME_HOP
+
+    return frames
+
+
+def extract_data(dir: str, file: str) -> dict[str, list[np.ndarray]]:
+    """Train the HMM+GMM models on the file specified"""
+
+    print(os.path.join(dir, file))
+
+    # get MFCCs
+    wav, _ = librosa.load(os.path.join(dir, file + ".WAV"), sr=config.SAMPLE_RATE)
+    mfccs = mfcc.to_mfcc(mfcc.to_log_mel(mfcc.to_hann_window(define_frames(wav))))
+
+    # get Phonemes
+    raw_phonemes: str
+    with open(os.path.join(dir, file + ".PHN")) as f:
+        raw_phonemes = f.read()
+
+    phonemes: list[tuple[int, int, str]] = []
+    for line in raw_phonemes.split("\n"):
+        if not line:
+            continue
+        start_sample, end_sample, phoneme = line.strip().split()
+        phonemes.append((int(start_sample), int(end_sample), phoneme))
+
+    # group MFCCs by Phoneme
+    grouped: dict[str, list[np.ndarray]] = {i: [] for i in config.PHONEMES}
+    for start_sample, end_sample, phoneme in phonemes:
+        start_frame = round(start_sample / config.FRAME_HOP)
+        if start_frame < len(mfccs):
+            grouped[phoneme].append(mfccs[start_frame])
+
+    return grouped
+
+
+def merge_phonemes(
+    phonemes: dict[str, list[np.ndarray]], curr_phonemes: dict[str, list[np.ndarray]]
+) -> dict[str, list[np.ndarray]]:
+    for k, v in curr_phonemes.items():
+        phonemes[k].extend(v)
+    return phonemes
+
+
+def fit_models(
+    models: dict[str, hmm.hmm.GMMHMM], phonemes: dict[str, list[np.ndarray]]
+):
+    """Fit all the models for acceptably long clusters of phonemes"""
+    for phoneme, frames in phonemes.items():
+        if len(frames) < config.N_STATES:
+            continue
+        stacked = np.vstack(frames)
+        models[phoneme].fit(stacked, [2 for i in range(0,len(frames) // 2)].append((len(frames) % 2)))
+        # print(f"\n\nScore: {models[phoneme].score(stacked)}")
+
+    print("Updated Model")
 
 
 def get_files(folder: str) -> list[str]:
     """Scan the directory and get the absolute paths to every single PHN, WAV pair"""
     file_names = set()
-    files = os.listdir(folder)
+    files = sorted(os.listdir(folder))
     for i in files:
         matches = regex.findall(r"(.*)\.(?:PHN)", i.upper())
 
@@ -29,14 +88,26 @@ def get_files(folder: str) -> list[str]:
 
 def get_next_indices(last_file_trained: dict[str, int]) -> tuple[int, int, int]:
     """Given the last file from the previous session, it tells you where to start"""
-    
+
     i = last_file_trained.get("DR-IND", 0)
     j = last_file_trained.get("SPKR-IND", 0)
     k = last_file_trained.get("FILE-IND", -1)
 
-    drs = sorted(os.listdir(TIMIT_PATH))
-    speakers = sorted(os.listdir(os.path.join(TIMIT_PATH, drs[i])))
-    files = sorted(os.listdir(os.path.join(TIMIT_PATH, drs[i], speakers[j])))
+    drs = sorted(
+        dr
+        for dr in os.listdir(config.TIMIT_TRAIN)
+        if os.path.isdir(os.path.join(config.TIMIT_TRAIN, dr))
+    )
+    DR_PATH = os.path.join(config.TIMIT_TRAIN, drs[i])
+
+    speakers = sorted(
+        spkr
+        for spkr in os.listdir(DR_PATH)
+        if os.path.isdir(os.path.join(DR_PATH, spkr))
+    )
+    SPKR_PATH = os.path.join(DR_PATH, speakers[j])
+
+    files = get_files(SPKR_PATH)
 
     k += 1
     if k >= len(files):
@@ -51,60 +122,61 @@ def get_next_indices(last_file_trained: dict[str, int]) -> tuple[int, int, int]:
     return i, j, k
 
 
-def train(models: dict[str, hmm.hmm.GMMHMM], dir: str, file: str) -> None:
-    """Train the HMM+GMM models on the file specified"""
-
-    print(os.path.join(dir, file + '.WAV'))
-    wav = librosa.load(os.path.join(dir, file + '.WAV'), sr=config.SAMPLE_RATE)
-    phones: str
-    with open(os.path.join(dir,file + '.PHN')) as f:
-        phones = f.read()
-
-
-        
-    print(wav, phones)
-
 def main() -> None:
     """Train the HMM+GMM Models"""
 
-    # loading
     models = {}
     last_file_trained = {}
 
-    if not os.path.exists(MODELS_PATH):
-        confirmation = input( f"{MODELS_PATH} doesn't exist, do you want to create a new set of HMM models? [Y/n]: ")
+    # loading
+    if not os.path.exists(config.MODELS_PATH):
+        confirmation = input(
+            f"{config.MODELS_PATH} doesn't exist, do you want to create a new set of HMM models? [Y/n]: "
+        )
 
         if confirmation != "Y":
             print("Okay, I can't really do anything then")
             return
 
         models = hmm.create()
-        hmm.persist(models, {}, MODELS_PATH)
+        hmm.persist(models, {}, config.MODELS_PATH)
     else:
-        models, last_file_trained = hmm.load(MODELS_PATH)
+        models, last_file_trained = hmm.load(config.MODELS_PATH)
 
     # training
     i_old, j_old, k_old = get_next_indices(last_file_trained)
-    i,j,k = 0,0,0
+    i, j, k = 0, 0, 0
 
-    drs = sorted(os.listdir(os.path.join(TIMIT_PATH)))
+    drs = sorted(
+        dr
+        for dr in os.listdir(config.TIMIT_TRAIN)
+        if os.path.isdir(os.path.join(config.TIMIT_TRAIN, dr))
+    )
     try:
         for i in range(i_old, len(drs)):
-            speakers = sorted(os.listdir(os.path.join(TIMIT_PATH, drs[i])))
+            DR_PATH = os.path.join(config.TIMIT_TRAIN, drs[i])
+            speakers = sorted(
+                spkr
+                for spkr in os.listdir(DR_PATH)
+                if os.path.isdir(os.path.join(DR_PATH, spkr))
+            )
 
             for j in range(j_old, len(speakers)):
-                files = get_files(os.path.join(TIMIT_PATH, drs[i], speakers[j]))
+                SPKR_PATH = os.path.join(DR_PATH, speakers[j])
+                files = get_files(SPKR_PATH)
 
+                phonemes = {phn: [] for phn in config.PHONEMES}
                 for k in range(k_old, len(files)):
-                    train(models, os.path.join(TIMIT_PATH, drs[i], speakers[j]), files[k])
-                    
+                    curr_phonemes = extract_data(SPKR_PATH, files[k])
+                    phonemes = merge_phonemes(phonemes, curr_phonemes)
+
+                fit_models(models, phonemes)
                 k_old = 0
             j_old = 0
-            
     except KeyboardInterrupt:
         last_file_trained = {"DR-IND": i, "SPKR-IND": j, "FILE-IND": k}
         print("Trained until: ", last_file_trained)
-        hmm.persist(models, last_file_trained, MODELS_PATH)
+        hmm.persist(models, last_file_trained, config.MODELS_PATH)
 
 
 if __name__ == "__main__":

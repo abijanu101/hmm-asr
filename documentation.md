@@ -70,7 +70,7 @@ One potential solution here is to include a catch-all UNK phoneme for room-tone 
 
 ### File Structure
 
-Learned what ```\_\_init\_\_.py``` files do and restructured the project.
+Learned what ```__init__.py``` files do and restructured the project.
 
 ### HMM+GMM Setup
 
@@ -81,3 +81,102 @@ While combing through the list of phonemes and reading about how sometimes peopl
 One might stop and think that this means we only need 39 HMM models rather than the 61 for each TIMIT phoneme. This is not necesassarily wrong, but I decided against it because its my first time training and I dont have the time to come back and redo everything if my mappings end up losing information or causing troubles later on.
 
 Next, I used ```joblib``` to persist and load the HMM models. This was necessary so we could have continue-where-you-left-off behavior for both training and also just to load weights from a file for the actual deployment.
+
+## 30/11/25: Training
+
+### Frame Definitions
+
+Unlike in realtime, we now have a finite ending. However, it is possible that the recording is not perfectly representable with the fixed FRAME_SIZE and FRAME_HOP we have chosen. To handle this boundary case, I previously thought to insert zeroes (i.e., silence) for the few frames that end beyond the buffer size to avoid loss of information, however I reviewed the dataset and each file ends and starts with h# anyways (a special silence indicator for utterance boundaries)
+
+So, I will let all samples except the last few be seen 4 times each with the last sample appearing either 0 or 1 times in total.
+
+### Overlapping Frames
+
+For the sake of example, consider a frame_size=3 and frame_hop=1 with the following .phn
+0 2 sh
+2 3 g
+
+The frames for this will be {s[0],s[1],s[2]}, {s[1],s[2],s[3]}. Maybe even add {s[2],s[3],NULL}, {s[3],NULL,NULL}
+
+In this case, the problem is that {s[1],s[2],s[3]} streches across the 2nd sample in a way that it lies within both the first and second phoneme. Such frames are called ambiguous frames and they can be dealt with in many ways.
+
+The way I chose to deal with them is that any given will be included in the frame if there is an overlap of 50% or more. In practice, this could mean that if a frame is perfectly centered at the phoneme boundary, the same frame will be fed to both of the HMMs - once for the first 50% and second for the next 50%.
+
+My hope is that this will help register co-articulation better.
+
+### Fitting the GMM+HMMs
+
+Eventually, I finished writing ```src/train/hmm.py```. However, upon running it, I ran into the following error:
+
+```File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\sklearn\cluster_kmeans.py", line 871, in _check_params_vs_input
+    raise ValueError(
+        f"n_samples={X.shape[0]} should be >= n_clusters={self.n_clusters}."
+    )
+ValueError: n_samples=1 should be >= n_clusters=3
+```
+
+I plugged this into GPT and apparently, the number of samples for each phoneme must be greater than or equal to the amount of Gaussians for the GMM. So, even though I grouped each frame by phoneme in the form grouped = {'sh': [], 'g': [mfccs[0], mfccs[3]], 'h#': [mfccs[1], mfccs[2]]}.
+
+One option was to simply add a condition to avoid triggering this error, but this risks losing data. A solution I thought of here was to only fit after processing ALL files for each speaker to maximize exploitation. But before trying that I thought to run the same program with the much quicker condition method to see a proof of concept.
+
+### Debugging Hell
+
+Turns out this too gave me the same error, even though i did ```len(frames) < config.N_GAUSSIANS```. Even after deleting my model and recreating it with less Gaussians, I got the exact same error and the ```n_clusters=3``` persisted even if my N_GAUSSIANS was far away from 3. Eventually, I just plugged in 10 Gaussians instead just to see if the n_clusters was independent of it and if GPT had misled me.
+
+I ran it and it somehow seemed to have fixed the issue actually? I say this since the next few files ran without raising any warnings or anything, but this too had issues.
+
+```
+D:\Coding\Projects\hmm-asr\src\common\mfcc.py:9: UserWarning: Empty filters detected in mel frequency basis. Some channels will produce empty responses. Try increasing your sampling rate (and fmax) or reducing n_mels.
+MEL_FILTERBANK = librosa.filters.mel(sr=config.SAMPLE_RATE, n_fft = config.FRAME_SIZE)
+Loading HMM+GMM Models...
+Loaded Model Successfully.
+D:\Coding\Projects\hmm-asr\resources\TIMIT\TRAIN\DR1\FCJF0\SA1
+D:\Coding\Projects\hmm-asr\resources\TIMIT\TRAIN\DR1\FCJF0\SA2
+D:\Coding\Projects\hmm-asr\resources\TIMIT\TRAIN\DR1\FCJF0\SI1027
+Fitting a model with 737 free scalar parameters with only 48 data points will result in a degenerate solution.
+D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py:809: RuntimeWarning: invalid value encountered in divide
+self.covars_ = c_n / c_d
+D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\_emissions.py:208: RuntimeWarning: divide by zero encountered in log
+log_cur_weights = np.log(self.weights_[i_comp])
+D:\Coding\Projects\hmm-asr\resources\TIMIT\TRAIN\DR1\FCJF0\SI1657
+Fitting a model with 737 free scalar parameters with only 48 data points will result in a degenerate solution.
+```
+
+Well, why did this even run? Well, it was actually because I still had the ```len(frames) < config.N_GAUSSIANS``` condition. Basically, what was happening was that it never fit() anything into the model since all of the phonemes had less than 10 corresponding frames.
+
+After figuring that out and removing the condition for testing purposes, I saw the same
+
+```
+File "D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\sklearn\cluster\_kmeans.py", line 871, in _check_params_vs_input
+raise ValueError(
+f"n_samples={X.shape[0]} should be >= n_clusters={self.n_clusters}."
+)
+ValueError: n_samples=1 should be >= n_clusters=3.
+```
+
+It was clear now that this n_clusters was something entirely unrelated to the amount of Gaussians. Eventually, I found out it's actually the number of STATES. (I confirmed this by changing the state count and n_clusters was no longer equal to 3...)
+
+However, running it now with a modified condition ```len(frames) < config.N_STATES```, STILL yielded Runtime warnings about division by zero in the hmmlearn API's code
+
+```
+D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py:809: RuntimeWarning: invalid value encountered in divide
+  self.covars_ = c_n / c_d
+D:\Coding\Projects\hmm-asr\resources\TIMIT\TRAIN\DR1\FCJF0\SI1027
+Even though the 'startprob_' attribute is set, it will be overwritten during initialization because 'init_params' contains 's'
+Even though the 'transmat_' attribute is set, it will be overwritten during initialization because 'init_params' contains 't'
+Fitting a model with 299 free scalar parameters with only 48 data points will result in a degenerate solution.
+Even though the 'weights_' attribute is set, it will be overwritten during initialization because 'init_params' contains 'w'
+Even though the 'means_' attribute is set, it will be overwritten during initialization because 'init_params' contains 'm'
+Even though the 'covars_' attribute is set, it will be overwritten during initialization because 'init_params' contains 'c'
+D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py:809: RuntimeWarning: divide by zero encountered in divide
+  self.covars_ = c_n / c_d
+D:\Coding\Projects\hmm-asr\asr-env\Lib\site-packages\hmmlearn\hmm.py:809: RuntimeWarning: invalid value encountered in divide
+  self.covars_ = c_n / c_d
+```
+
+### The Grouping Solution
+I didn't quite know why all these warnings were coming up, but one of them was quite explicit; I needed more datapoints. So, the next step was to try the grouping solution. And lo-and-behold, it really just worked with no problems as soon as i grouped it.
+
+However, I now realized another mistake I made. I had treated the ``lengths`` param in ``.fit()`` as the amount of frames while it was supposed to be an array representing the lengths of the contiguous frames for each phoneme utterance.
+
+Turns out I need to use a ```dict[str, list[list[np.ndarray]]]``` So i could have a list of sequences for each phoneme so i could fit properly. 

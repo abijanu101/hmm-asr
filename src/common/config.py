@@ -1,15 +1,29 @@
+import os
+import pathlib
+
 """Audio Processing Stuff"""
 SAMPLE_RATE = 16000             # this is usually enough for speech
 
-FRAME_SIZE = SAMPLE_RATE // 5   # 20ms (1s = 100ms; 1/5s = 20ms)
+FRAME_SIZE = SAMPLE_RATE // 50  # 20ms (1s = 1000ms; 1/50s = 20ms)
 FRAME_HOP = FRAME_SIZE // 4     # 5ms
 
 N_MFCC = 12                     # 12 dimensional MFCC embeddings
 
+"""Paths"""
+MODELS_PATH = os.path.join(
+    pathlib.Path(__file__).parent.parent.parent, "models", "hmm.pk1"
+)
+TIMIT_ROOT = os.path.join(
+    pathlib.Path(__file__).parent.parent.parent, "resources", "TIMIT"
+)
+TIMIT_TRAIN = os.path.join(
+    pathlib.Path(__file__).parent.parent.parent, "resources", "TIMIT", "TRAIN"
+)
 
 """GMM + HMM Stuff"""
 N_EM_ITER = 50                  # max amount of Expectation-Maximation iterations
 N_GAUSSIANS = 4                 # no of gaussians for GMM
+N_STATES = 3                    # no of HMM states
 
 PHONEMES = [                    # all of the phonemes the TIMIT dataset contains
     "aa", "ae", "ah", "ao", "aw", "ax",

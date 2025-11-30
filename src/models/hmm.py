@@ -11,7 +11,7 @@ def create() -> dict[str, hmm.GMMHMM]:
     models = {}
     for phn in config.PHONEMES:
         models[phn] = hmm.GMMHMM(
-            n_components=3,  # start, middle, end
+            n_components=config.N_STATES,  # start, middle, end
             n_mix=config.N_GAUSSIANS,
             algorithm="viterbi",
             n_iter=config.N_EM_ITER,  # MAX EM Iterations
