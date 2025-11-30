@@ -20,8 +20,8 @@ def define_frames(wav: np.ndarray) -> list[np.ndarray]:
     return frames
 
 
-def extract_data(dir: str, file: str) -> dict[str, list[np.ndarray]]:
-    """Train the HMM+GMM models on the file specified"""
+def extract_data(dir: str, file: str) -> dict[str, list[list[np.ndarray]]]:
+    """Return a mapping from phoneme to its corresponding MFCC sequences"""
 
     print(os.path.join(dir, file))
 
@@ -42,33 +42,37 @@ def extract_data(dir: str, file: str) -> dict[str, list[np.ndarray]]:
         phonemes.append((int(start_sample), int(end_sample), phoneme))
 
     # group MFCCs by Phoneme
-    grouped: dict[str, list[np.ndarray]] = {i: [] for i in config.PHONEMES}
+    
+    grouped: dict[str, list[list[np.ndarray]]] = {i: [] for i in config.PHONEMES}
     for start_sample, end_sample, phoneme in phonemes:
-        start_frame = round(start_sample / config.FRAME_HOP)
-        if start_frame < len(mfccs):
-            grouped[phoneme].append(mfccs[start_frame])
+        range_start = round(start_sample / config.FRAME_HOP)
+        range_end = round(end_sample / config.FRAME_HOP)
+        
+        if range_start >= len(mfccs):
+            continue
 
+        grouped[phoneme].append(mfccs[range_start: range_end])
+        
     return grouped
 
 
 def merge_phonemes(
-    phonemes: dict[str, list[np.ndarray]], curr_phonemes: dict[str, list[np.ndarray]]
-) -> dict[str, list[np.ndarray]]:
+    phonemes: dict[str, list[list[np.ndarray]]], curr_phonemes: dict[str, list[list[np.ndarray]]]
+) -> dict[str, list[list[np.ndarray]]]:
     for k, v in curr_phonemes.items():
         phonemes[k].extend(v)
     return phonemes
 
 
 def fit_models(
-    models: dict[str, hmm.hmm.GMMHMM], phonemes: dict[str, list[np.ndarray]]
+    models: dict[str, hmm.hmm.GMMHMM], phonemes: dict[str, list[list[np.ndarray]]]
 ):
     """Fit all the models for acceptably long clusters of phonemes"""
-    for phoneme, frames in phonemes.items():
-        if len(frames) < config.N_STATES:
-            continue
-        stacked = np.vstack(frames)
-        models[phoneme].fit(stacked, [2 for i in range(0,len(frames) // 2)].append((len(frames) % 2)))
-        # print(f"\n\nScore: {models[phoneme].score(stacked)}")
+    for phoneme, sequences in phonemes.items():
+        flattened : list[np.ndarray] = [frame for seq in sequences for frame in seq]
+        if not flattened: continue
+        stacked = np.vstack(flattened)
+        models[phoneme].fit(stacked, [len(seq) for seq in sequences])
 
     print("Updated Model")
 

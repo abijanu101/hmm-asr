@@ -179,4 +179,8 @@ I didn't quite know why all these warnings were coming up, but one of them was q
 
 However, I now realized another mistake I made. I had treated the ``lengths`` param in ``.fit()`` as the amount of frames while it was supposed to be an array representing the lengths of the contiguous frames for each phoneme utterance.
 
-Turns out I need to use a ```dict[str, list[list[np.ndarray]]]``` So i could have a list of sequences for each phoneme so i could fit properly. 
+Turns out I need to use a ```dict[str, list[list[np.ndarray]]]``` So i could have a list of sequences for each phoneme so i could fit properly.
+
+
+### Debugging Grouping
+I found a logical error that made it such that i only inserted only the first frame in my ```mfccs``` for each labelled phoneme utterance even though there were tens of other ones in that range that I should've inserted that led to really impossible results.
