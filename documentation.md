@@ -231,3 +231,68 @@ At the time of writing, I have quite frankly no clue why this might be happening
 ### One-Go Training
 
 I really didn't want to do this because it's so anti-thetical to a good development experience, but it's clear that .fit() is destructive and resets progress from the previous call. So I will now try and do it all in one go.
+
+
+## 1/12/25: Testing the Acoustic Model
+
+Since I left the training script to fit everything in one go after reading all the files in the TIMIT training set overnight; I now have something resembling a model, but I don't know how accurate it is. To test this I will do the following 
+
+- read each of the PHN files in the testing partition of the dataset
+- define frames over that chunk specifically
+- feed the corresponding sequence of MFCCs into all 61 per-phoneme HMMs
+- verify that the labelled phoneme is what my model predicts
+
+### First Model Details
+
+Initially, I had some hickups trying to write the script, but eventually I got it working and ran it on the entire TIMIT/TEST directory. Before I discuss the results, let us note the hyperparamets for the 61 GMM+HMM models that make up the acoustic model.
+- 3 Gaussians for GMM
+- 50 Iterations for EM
+- and 3 States per Phoneme HMM
+- FRAME_SIZE = 20ms 
+- FRAME_HOP = 5ms
+
+### First Test Results
+
+After the training script having ran for over 20 minutes, the results were in!
+  It had crashed, because I didn't have a guard clause for sequences that were too short...
+
+However, this test run printed out to console after each speaker and it had already scanned through over half of the TEST directory (died at the 22nd speaker in DR5.) The results had also remained largely consistent for the last 5 minutes so I felt like this was enough for verification purposes.
+
+After processing 44115 labelled phoneme utterances,
+  77.1% of all sample ranges had their correct label within the top-5 most activated models
+  64.7% of all sample ranges had their correct label within the top-3 most activated models
+  53.7% of all sample ranges had their correct label within the top-2 most activated models
+  35.9% of all sample ranges had their correct label within the top-1 most activated models
+  
+Some of these utterances can last longer than others and so we might find value in frame-normalization. So, we also note that:
+
+After processing 714,929 frames in total,
+  83.1% of all frames had their correct label within the top-5 most activated models
+  72.0% of all frames had their correct label within the top-3 most activated models
+  61.4% of all frames had their correct label within the top-2 most activated models
+  42.7% of all frames had their correct label within the top-1 most activated models
+
+Essentially, on average, 83.1% of the duration of the utterances were accurately predicted on. 
+
+### Plan for Improvement
+
+Even though 83% is pretty good, especially considering these 61 phonemes will later collapse to 39 after the mapping to CMUdict phonemes, top-5 is still a pretty wide gap to be getting less than 90%, I can probably do better with more Gaussians.
+
+We are in a fairly safe place to experiment since I have already committed the ```hmm.pk1``` file for this particular model to github and so, if the next model is worse, I can still retrieve this one at any time.
+
+So, after having (hopefully) fixed the reason the test script had previously crashed, I plan to leave a model having more parameters to train in the background as I work on the decoder. 
+
+### Clean-up and Retraining
+
+I still had the artifacts from before I decided on One-Go training, so I fixed them up. Once I changed how my .pk1 files were structured, I quickly started to train a new model, only this time with 6 Gaussians instead of 3.
+
+### TIMIT Phonemes -> CMUdict Phonemes
+
+TIMIT uses 61 Phonemes, CMUdict uses only 39.
+
+It searched a lot to find a valid mapping for TIMIT -> CMUdict that was from an authoritative source. All I could find was LLM slop with no sources. Even now I only have one lead, this paper (https://www.mdpi.com/2076-3417/11/1/428) I found cited another paper that claimed to have grouped the TIMIT phonemes into classes by sound similarity.
+
+This wasn't exactly made for CMUdict, so what I did was I manually compared the CMU and TIMIT symbols with the Groups from the Paper to Produce my own mappings. I also created an additional group of phonemes for silence (SIL) to avoid loss of information. Still this was a bit finnicky, for example, this mapping groups together _aa_ and _ao_ even though CMUdict already has both of them. Further, there's the case for _dx_ where the mapping simply doesn't even include it and I had to look at external resources to map it to _D_.
+
+All this work was to produce ```mappings.txt```, but now I should be able to reliably switch between mappings for decoding.
+

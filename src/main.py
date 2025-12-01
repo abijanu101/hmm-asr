@@ -1,9 +1,9 @@
 import sounddevice as sd
 import numpy as np
-import matplotlib.pyplot as plt
 import threading
 
 from src.common import config
+from src.common import preprocessing as pre
 from src.common import mfcc
 
 transliterating = False
@@ -21,8 +21,8 @@ def handle_asr() -> None:
         curr, _ = stream.read(config.FRAME_SIZE)
 
         # preprocessing
-        frames = mfcc.define_frames(prev, curr)
-        windows = mfcc.to_hann_window(frames)
+        frames = pre.frames_from_stream(prev, curr)
+        windows = pre.to_hann_window(frames)
         log_mels = mfcc.to_log_mel(windows)
         mfccs = mfcc.to_mfcc(log_mels)
 

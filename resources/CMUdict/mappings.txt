@@ -1,0 +1,40 @@
+AA aa
+AE ae
+AH ah ax ax-h
+AO ao
+AW aw
+AY ay
+B b
+CH ch
+D d dx
+DH dh
+EH eh
+ER er axr
+EY ey
+F f
+G g
+HH hh hv
+IH ih ix
+IY iy
+JH jh
+K k
+L l el
+M m em
+N n en nx
+NG ng eng
+OW ow
+OY oy
+P p
+R r
+S s
+SH sh
+T t
+TH th
+UH uh
+UW uw ux
+V v
+W w
+Y y
+Z z
+ZH zh
+SIL bcl pcl dcl tcl gcl kcl q epi pau h#

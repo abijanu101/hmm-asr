@@ -24,29 +24,23 @@ def create() -> dict[str, hmm.GMMHMM]:
     return models
 
 
-def persist(models: dict[str, hmm.GMMHMM], last_dr_trained: int) -> None:
+def persist(models: dict[str, hmm.GMMHMM]) -> None:
     """Persist HMM Models along with information about the last file successfully trained on in the dataset"""
 
     print("Saving...")
-    data = {"models": models, "last_dr_trained": last_dr_trained}
-    joblib.dump(data, config.HMM_MODEL_PATH)
+    joblib.dump(models, config.HMM_MODEL_PATH)
 
     print(f"Saved models as file '{config.HMM_MODEL_PATH}' successfully.")
 
 
-def load(path: str) -> tuple[dict[str, hmm.GMMHMM], int]:
+def load(path: str) -> dict[str, hmm.GMMHMM]:
     """Load HMM Models along with the information about the last file successfully trained on in the dataset"""
 
     if not os.path.exists(path):
         raise RuntimeError(f"{path} does not exist")
 
     print("Loading HMM+GMM Models...")
-    data = joblib.load(path)
-    last_dr_trained = data.get("last_dr_trained", -1)
-
-    models = data.get("models", None)
-    if not models:
-        raise RuntimeError(f"{path} is not a valid models file")
-
+    models = joblib.load(path)
+    
     print("Loaded Model Successfully.")
-    return models, last_dr_trained
+    return models
