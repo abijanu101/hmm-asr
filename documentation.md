@@ -296,3 +296,17 @@ This wasn't exactly made for CMUdict, so what I did was I manually compared the 
 
 All this work was to produce ```mappings.txt```, but now I should be able to reliably switch between mappings for decoding.
 
+
+## 2/12/25: Decoder
+
+Before we get to the decoder, here's the test results for the new model I trained with 6 Gaussians instead of 3.
+
+### Model 2 Test Results
+
+Metric  Amount   In Top 5                In Top 3                In Top 2                In Top 1
+Phones  46314    0.8021548559830721      0.6823206805717493      0.5740812713218465      0.39050826963769053
+Frames  755537   0.8554935099141405      0.7481499913306694      0.6468697098884635      0.4512604941915485
+
+Overall, this is a really notable increase from last time. Besides, these were all the ones that placed in the top X out of 61 phonemes. These 61 phonemes are to be collapsed into 39 anyways so similar sounding phonemes will have more of a sonic gap between them and will give pretty good results in practice.
+
+So, for now, the acoustic model is to not be touched anymore until I finish the rest.

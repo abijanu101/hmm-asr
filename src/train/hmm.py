@@ -2,15 +2,15 @@ import os
 import numpy as np
 
 from src.common import config
-from src.common import file_reading as fr
+from src.common import timit_parsing as tp
 from src.common import hmm
 
 
 def parse_utterance(dir: str, file: str) -> dict[str, list[list[np.ndarray]]]:
     """Given a valid Utterance ID and Directory, return a mapping from phoneme to MFCC sequence list for the utterance"""
 
-    mfccs = fr.extract_mfccs(dir, file)
-    phonemes = fr.extract_phonemes(dir, file)
+    mfccs = tp.extract_mfccs(dir, file)
+    phonemes = tp.extract_phonemes(dir, file)
 
     grouped: dict[str, list[list[np.ndarray]]] = {i: [] for i in config.PHONEMES}
     for start_sample, end_sample, phoneme in phonemes:
@@ -88,7 +88,7 @@ def main() -> None:
 
         for spkr in speakers:
             SPKR_PATH = os.path.join(DR_PATH, spkr)
-            files = fr.get_files(SPKR_PATH)
+            files = tp.get_files(SPKR_PATH)
 
             for rec in files:
                 curr_phonemes = parse_utterance(SPKR_PATH, rec)
